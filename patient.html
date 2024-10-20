@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Patient - Arogya Seva DApp</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <a class="navbar-brand" href="#">Arogya Seva DApp</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="patient.html">Add Patient</a></li>
+                    <li class="nav-item"><a class="nav-link" href="doctor.html">Doctor's Panel</a></li>
+                    <li class="nav-item"><a class="nav-link" href="patientView.html">View Status</a></li>
+                    <li class="nav-item"><a class="nav-link" href="./templates/index.html">Claim Insurance</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+    <main class="container mt-4">
+        <h2>Add Patient Details</h2>
+        <form id="add-patient-form">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" class="form-control" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone:</label>
+                <input type="text" class="form-control" id="phone" name="phone" required>
+            </div>
+            <div class="form-group">
+                <label for="gender">Gender:</label>
+                <input type="text" class="form-control" id="gender" name="gender" required>
+            </div>
+            <div class="form-group">
+                <label for="dob">Date of Birth:</label>
+                <input type="date" class="form-control" id="dob" name="dob" required>
+            </div>
+            <div class="form-group">
+                <label for="bloodgroup">Blood Group:</label>
+                <input type="text" class="form-control" id="bloodgroup" name="bloodgroup" required>
+            </div>
+            <div class="form-group">
+                <label for="comments">Diagnosis:</label>
+                <textarea class="form-control" id="comments" name="comments"></textarea>
+            </div>
+            <button type="button" class="btn btn-primary" id="submit-button">Submit</button>
+        </form>
+        
+        <div id="patient-details" class="mt-4"></div>
+    </main>
+    <footer class="mt-4"></footer>
+
+    <!-- Script Section to be updated -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.6.0/dist/web3.min.js"></script>
+    
+    <!-- Replace the entire script here -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            let web3;
+
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const accounts = await web3.eth.getAccounts();
+                    console.log('Connected account:', accounts[0]);
+                } catch (error) {
+                    console.error("User denied account access:", error);
+                    return;
+                }
+            } else {
+                alert('Please install MetaMask!');
+                return;
+            }
+
+            const contractAddress = '0x5e0ac81155ADb2F32063c5011AA8D1849da01c27'; // Add your contract address here
+            const contractABI = [
+                // Your contract ABI here
+            ];
+
+            const healthcareContract = new web3.eth.Contract(contractABI, contractAddress);
+
+            const nameInput = document.getElementById('name');
+            const phoneInput = document.getElementById('phone');
+            const genderInput = document.getElementById('gender');
+            const dobInput = document.getElementById('dob');
+            const bloodgroupInput = document.getElementById('bloodgroup');
+            const commentsInput = document.getElementById('comments');
+            const submitButton = document.getElementById('submit-button');
+            const patientDetailsDiv = document.getElementById('patient-details');
+
+            const manualAddress = '0x5e0ac81155ADb2F32063c5011AA8D1849da01c27'; // Replace with your MetaMask address
+
+            submitButton.addEventListener('click', addPatient);
+
+            async function addPatient(event) {
+                event.preventDefault();
+
+                const name = nameInput.value;
+                const phone = phoneInput.value;
+                const gender = genderInput.value;
+                const dob = dobInput.value;
+                const bloodgroup = bloodgroupInput.value;
+                const comments = commentsInput.value;
+
+                try {
+                    const transaction = await healthcareContract.methods.addPatient(name, phone, gender, dob, bloodgroup, comments).send({ from: manualAddress });
+
+                    // Listen for the event emitted and extract the patient ID
+                    healthcareContract.events.PatientAdded({
+                        filter: {}, // You can add filters if necessary
+                        fromBlock: transaction.blockNumber
+                    }, function(error, event) {
+                        if (error) {
+                            console.error('Error fetching event:', error);
+                        } else {
+                            const patientId = event.returnValues.id;
+                            alert(`Patient added successfully! ID: ${patientId}`);
+                            displayPatientDetails(patientId, name, phone, gender, dob, bloodgroup, comments);
+                        }
+                    });
+
+                    clearForm();
+                } catch (error) {
+                    console.error('Error adding patient details:', error);
+                    alert('Failed to add patient details. Please try again.');
+                }
+            }
+
+            function displayPatientDetails(patientId, name, phone, gender, dob, bloodgroup, comments) {
+                const patientDetailsHTML = `
+                    <h2>Patient Details</h2>
+                    <p><strong>Patient ID:</strong> ${patientId}</p>
+                    <p><strong>Name:</strong> ${name}</p>
+                    <p><strong>Phone:</strong> ${phone}</p>
+                    <p><strong>Gender:</strong> ${gender}</p>
+                    <p><strong>Date of Birth:</strong> ${dob}</p>
+                    <p><strong>Blood Group:</strong> ${bloodgroup}</p>
+                    <p><strong>Diagnosis:</strong> ${comments}</p>
+                `;
+                patientDetailsDiv.innerHTML = patientDetailsHTML;
+            }
+
+            function clearForm() {
+                nameInput.value = '';
+                phoneInput.value = '';
+                genderInput.value = '';
+                dobInput.value = '';
+                bloodgroupInput.value = '';
+                commentsInput.value = '';
+            }
+        });
+    </script>
+</body>
+</html>
